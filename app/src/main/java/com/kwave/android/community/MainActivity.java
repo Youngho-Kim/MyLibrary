@@ -1,66 +1,186 @@
 package com.kwave.android.community;
 
-import android.app.AlertDialog;
-import android.content.DialogInterface;
+import android.content.Intent;
+import android.os.AsyncTask;
+import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Message;
+import android.support.annotation.RequiresApi;
 import android.support.v7.app.AppCompatActivity;
 import android.view.View;
+import android.widget.Button;
+import android.widget.CheckBox;
+import android.widget.EditText;
 import android.widget.TextView;
 
 
 public class MainActivity extends AppCompatActivity {
-    String msg;
-    TextView tv;
 
+    public static final int SET_DONE = 1;
+    TextView tv;
+    CustomProgressBar customProgressBar;
+
+    Button goMainPage;
+    EditText id, pw;
+    CheckBox admin;
+
+    String administ = "관리자";
+
+//    ProgressDialog progress;        // 프로그레스 다이얼 생성
+    //프로그레스다이얼은 실행시 내부에서 핸들러가 있어 sendMessage가 동작된다.
+    // Thread에서 호출하기 위한 handler
+    Handler handler = new Handler(){
+        @Override
+        public void handleMessage(Message msg) {    // 핸들러는 루퍼의 메세지큐로 아래 메세지를 전달하고 받는다.
+            switch (msg.what){      /// what은 무엇을 처리할지에 대한 구분자
+                // 메세지큐에서 메세지를 하나 꺼내서 Runnable 객체가 존재하면 run을 실행하고 존재하지 않으면 mHandler의 handleMessage를 호출한다.
+                case SET_DONE :
+                    setDone();
+                    break;
+            }
+        }
+    };
+    @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        tv = (TextView) findViewById(R.id.textView1);
-        button1(tv);
-    }
 
-    public void button1(View v){
-        AlertDialog dialog = createDialogBox();
-        dialog.show();
-    }
+        customProgressBar = new CustomProgressBar(this);
+        setView();
 
-    private AlertDialog createDialogBox(){
-        AlertDialog.Builder builder = new AlertDialog.Builder(this);
 
-        builder.setTitle("페이지 선택");
-        builder.setMessage("어느 페이지로 가시겠습니까?");
-        builder.setIcon(R.mipmap.ic_launcher_round);
-
-        builder.setPositiveButton("공지", new DialogInterface.OnClickListener(){
-            public void onClick(DialogInterface dialog, int whichButton){
-//                msg = "난 계속 이길을 갈것이야 / " + Integer.toString(whichButton);
-                msg = "공지 페이지로 갑니다";
-                tv.setText(msg);
+        goMainPage.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                runAsync();
             }
         });
+//        customProgressBar.show();
+//        // 화면에 진행상태를 표시
+//        // 메인 액티비티에서 사용할 프로그레스 객체 생성
+//        progress = new ProgressDialog(this);        // getBaseContext를 하면 오류남
+//        // 프로그레스 세팅
+////        progress.setTitle(" 진행중입니다.");
+////        progress.setMessage("우리 커뮤니티에 오신 것을 환영합니다");
+//        progress.setIcon(R.mipmap.ic_launcher_round);
+//        progress.setProgressDrawable(getDrawable(R.drawable.loading));
+////        progress.setProgressStyle(ProgressDialog.STYLE_SPINNER);
+//        runAsync();
 
-        builder.setNeutralButton("집 소개", new DialogInterface.OnClickListener(){
-            public void onClick(DialogInterface dialog, int whichButton){
-//                msg = "생각 좀 하자 / " + Integer.toString(whichButton);
-                msg = "집소개 페이지로 갑니다";
-                tv.setText(msg);
-            }
-        });
-
-        builder.setNegativeButton("비용", new DialogInterface.OnClickListener(){
-            public void onClick(DialogInterface dialog, int whichButton){
-//                msg = "싫어 다른 길로 갈래 ㅠ / " + Integer.toString(whichButton);
-                msg = "비용 페이지로 갑니다";
-                tv.setText(msg);
-            }
-        });
-
-
-        AlertDialog dialog = builder.create();
-        return dialog;
     }
+
+    private void setView(){
+        goMainPage = (Button) findViewById(R.id.goMainPage);
+        id = (EditText) findViewById(R.id.id);
+        pw = (EditText) findViewById(R.id.pw);
+        admin = (CheckBox) findViewById(R.id.admin);
+
+    }
+    private void setDone() {
+        // 프로그레스 창을 해제
+        customProgressBar.dismiss();
+//        if(id.getText() == administ)
+        goDialog();
+    }
+    private void runAsync(){
+
+        new AsyncTask<String, Integer, Float>() {
+            // AsyncTask<1, 2, 3>
+            // 제네릭 타입
+            // 1. doInBackroud의 인자
+            // 2. onProgressUpdate의 인자
+            // 3. doInBackground의 return 타입 = onPostExecute 인자값
+
+
+            // doInBackground가 호출 되기 전에 먼저 호출된다.
+            @Override
+            protected void onPreExecute() {     // - 핸들러가 실행
+//                progress.show();    // 쓰레드가 시작하기 전에 프로그레스를 먼저 실행한다.
+                customProgressBar.show();
+            }
+
+
+            @Override
+            // 데이터를 처리...   // 쓰레드가 실행
+            protected Float doInBackground(String... params) { // thread의 run과 같은 역할
+                // 10초 후에
+                try {
+//                    Log.e("AsyncTask", "첫번째 값 : "+params[0]);
+//                    Log.e("AsyncTask", "두번째 값 : "+params[1]);
+
+                    for(int i=0; i<10;i++){
+                        publishProgress(i*10);  // <- onProgressUpdate를 실행시킴    // 내부에서 getHandler().obtainMessage가 실행됨
+                        Thread.sleep(300);
+                    }
+
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+
+                return 1000.4f;
+            }
+
+            // doInBackground가 호출 된 후에 호출된다.
+            @Override
+            protected void onPostExecute(Float result) {        // 쓰레드가 완료되었을때 실행
+//                Log.e("AsyncTask", "doInBackground의 결과값" +result);
+                // 결과값을 메인 UI에 세팅하는 로직을 여기에 작성한다.
+                setDone();
+                customProgressBar.dismiss();     // 프로그레스 종료
+            }
+
+//            @Override
+//            protected void onCancelled() {      // 쓰레드가 중단 되었을때 실행
+//                super.onCancelled();
+//            }
+
+            @Override
+            // 주기적으로 doInBackground에서 호출이 가능한 함수
+            // 중간중간  화면에 그리는 작업이 필요할때 publishProgress에 의해서 실행된다.
+            protected void onProgressUpdate(Integer... values) {
+//                progress.setMessage("진행율 = "+values[0] + "%");      // 핸들러의 메세지 큐에 메세지 전달
+            }
+        }.execute("안녕", "하세요");    // = thread의 start 같은 역할  / doInBackground를 실행
+    }
+
+    private void runThread() {
+        customProgressBar.show();
+        CustomThread thread = new CustomThread(handler);
+        thread.start();
+
+    }
+    public void goDialog(){
+        Intent intent = new Intent(this,DialogTest.class);
+        startActivity(intent);
+    }
+}
+
+class CustomThread extends Thread{
+    Handler handler;
+
+    public CustomThread(Handler handler) {
+        this.handler = handler;
+    }
+    @Override
+    public void run() {
+        // 10초 후에
+        try {
+            Thread.sleep(1000);
+            // Main UI에 현재 thread가 접근 할 수 없으므로
+            // handler를 통해 호출해준다.
+            handler.sendEmptyMessage(MainActivity.SET_DONE);
+            // 핸들러에 post로 시작하는 함수는 Runnuble 객체를 이용하여 메세지를 추가하는 함수이며
+            // 핸들러에 send로 시작하는 함수는 handleMessage 재정의 함수까지 사용하는 메세지를 추가하는 함수이다.
+
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+    }
+
+
 
 }
 
